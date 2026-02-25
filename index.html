@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Debt Freedom Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --bg:#0f1117;--surface:#181c27;--surface2:#1f2436;--border:#2a3050;
+    --accent:#4ade80;--accent2:#34d399;--danger:#f87171;--warn:#fb923c;
+    --muted:#6b7280;--text:#e2e8f0;--text2:#94a3b8;--radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;
+    background-image:radial-gradient(ellipse at 20% 0%,rgba(74,222,128,.06) 0%,transparent 50%),
+                     radial-gradient(ellipse at 80% 100%,rgba(52,211,153,.04) 0%,transparent 50%);}
+
+  /* SIGN IN SCREEN */
+  #signInScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:24px;padding:40px;}
+  .signin-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:48px 40px;text-align:center;max-width:420px;width:100%;}
+  .signin-card h1{font-family:'DM Serif Display',serif;font-size:2rem;margin-bottom:6px;}
+  .signin-card h1 span{color:var(--accent);font-style:italic;}
+  .signin-card p{color:var(--text2);font-size:.9rem;margin-bottom:32px;line-height:1.6;}
+  .google-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:14px 24px;background:#fff;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:600;color:#1f1f1f;cursor:pointer;transition:opacity .2s;}
+  .google-btn:hover{opacity:.9;}
+  .google-btn svg{width:20px;height:20px;flex-shrink:0;}
+  .signin-features{display:flex;flex-direction:column;gap:10px;width:100%;max-width:420px;}
+  .signin-feat{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;font-size:.84rem;color:var(--text2);}
+  .signin-feat .icon{font-size:1.2rem;flex-shrink:0;}
+
+  /* SETUP BANNER */
+  #setupBanner{background:linear-gradient(135deg,rgba(74,222,128,.1),rgba(52,211,153,.05));border:1px solid rgba(74,222,128,.25);border-radius:14px;margin:24px 40px 0;padding:20px 26px;display:none;}
+  #setupBanner h2{font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--accent);margin-bottom:10px;}
+  .url-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .url-row input{flex:1;min-width:220px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:9px 13px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;outline:none;transition:border-color .2s;}
+  .url-row input:focus{border-color:var(--accent);}
+  .url-row input::placeholder{color:var(--muted);}
+  .load-btn{padding:9px 18px;background:var(--accent);color:#0f1117;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .load-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .status-msg{font-size:.76rem;margin-top:6px;min-height:16px;}
+  .status-msg.err{color:var(--danger);} .status-msg.ok{color:var(--accent);} .status-msg.loading{color:var(--text2);}
+
+  /* HEADER */
+  #appShell{display:none;}
+  header{padding:24px 40px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+  h1{font-family:'DM Serif Display',serif;font-size:1.9rem;line-height:1.1;}
+  h1 span{color:var(--accent);font-style:italic;}
+  .subtitle{color:var(--text2);font-size:.82rem;margin-top:3px;}
+  .header-right{display:flex;gap:9px;flex-wrap:wrap;align-items:center;}
+  .total-badge{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 16px;text-align:right;}
+  .total-badge .lbl{color:var(--muted);font-size:.67rem;text-transform:uppercase;letter-spacing:.1em;}
+  .total-badge .amt{font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--danger);}
+  .hdr-btn{display:flex;align-items:center;gap:6px;padding:8px 13px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.79rem;transition:all .2s;}
+  .hdr-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .hdr-btn.danger-btn:hover{border-color:var(--danger);color:var(--danger);}
+  .sync-indicator{display:flex;align-items:center;gap:6px;font-size:.75rem;padding:6px 12px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);}
+  .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s;}
+  .sync-dot.syncing{background:var(--warn);animation:pulse .8s infinite;}
+  .sync-dot.synced{background:var(--accent);}
+  .sync-dot.error{background:var(--danger);}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+  main{padding:20px 40px;max-width:1500px;}
+
+  /* CONTROLS */
+  .controls{display:flex;gap:11px;margin-bottom:20px;flex-wrap:wrap;align-items:center;}
+  .extra-input{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 13px;}
+  .extra-input span{color:var(--text2);font-size:.77rem;}
+  .extra-input input{background:transparent;border:none;outline:none;color:var(--accent);font-size:.96rem;font-family:'DM Sans',sans-serif;font-weight:600;width:84px;}
+  .strategy-btns{display:flex;gap:7px;}
+  .strategy-btn{padding:8px 13px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.79rem;transition:all .2s;white-space:nowrap;}
+  .strategy-btn.active{background:var(--accent);color:#0f1117;border-color:var(--accent);font-weight:600;}
+  .edit-hint{display:inline-flex;align-items:center;gap:5px;background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.18);border-radius:8px;padding:5px 10px;font-size:.73rem;color:var(--accent);}
+
+  /* SUMMARY */
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:11px;margin-bottom:22px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:15px;position:relative;overflow:hidden;}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent);}
+  .stat-card .slabel{font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px;}
+  .stat-card .svalue{font-family:'DM Serif Display',serif;font-size:1.3rem;}
+  .stat-card .svalue.green{color:var(--accent);} .stat-card .svalue.red{color:var(--danger);}
+  .stat-card .sdesc{font-size:.68rem;color:var(--text2);margin-top:3px;}
+
+  /* SECTION */
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;flex-wrap:wrap;gap:7px;}
+  .section-title{font-family:'DM Serif Display',serif;font-size:1.1rem;display:flex;align-items:center;gap:8px;}
+  .section-title .pill{font-family:'DM Sans',sans-serif;font-size:.63rem;background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:2px 9px;color:var(--text2);}
+
+  /* PAYOFF CARDS */
+  .payoff-plan{display:grid;grid-template-columns:repeat(auto-fill,minmax(182px,1fr));gap:10px;margin-bottom:22px;}
+  .payoff-card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:14px;position:relative;transition:border-color .2s;}
+  .payoff-card:hover{border-color:rgba(74,222,128,.3);}
+  .payoff-card.focus{border-color:var(--accent);background:rgba(74,222,128,.05);}
+  .payoff-card .rank{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;}
+  .payoff-card .pname{font-weight:600;font-size:.83rem;margin-bottom:4px;}
+  .payoff-card .pamount{font-family:'DM Serif Display',serif;font-size:1.12rem;color:var(--danger);margin-bottom:3px;}
+  .payoff-card .prate{font-size:.71rem;color:var(--text2);}
+  .payoff-card .focus-label{position:absolute;top:8px;right:8px;background:var(--accent);color:#0f1117;font-size:.57rem;font-weight:700;padding:2px 7px;border-radius:100px;text-transform:uppercase;}
+  .month-saved{color:var(--accent);font-size:.72rem;margin-top:4px;}
+
+  /* TABLE */
+  .debt-table{width:100%;border-collapse:collapse;background:var(--surface);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);margin-bottom:13px;}
+  .debt-table th{background:var(--surface2);padding:9px 11px;text-align:left;font-size:.63rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;}
+  .debt-table td{padding:0;border-bottom:1px solid rgba(42,48,80,.45);vertical-align:middle;}
+  .debt-table tr:last-child td{border-bottom:none;}
+  .debt-table tr:hover td{background:rgba(255,255,255,.012);}
+  .debt-table tr.priority-row td{background:rgba(74,222,128,.04);}
+  .debt-table tr.priority-row td:first-child{border-left:3px solid var(--accent);}
+  .debt-table tr.saving td{background:rgba(74,222,128,.07)!important;transition:background .3s;}
+
+  .cw{padding:8px 11px;min-height:36px;display:flex;align-items:center;font-size:.82rem;position:relative;}
+  .cw.ed{cursor:text;}
+  .cw.ed:hover{background:rgba(74,222,128,.05);}
+  .cw.ed:hover::after{content:'✎';position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:.58rem;color:var(--accent);opacity:.6;}
+  .cw.ro{cursor:default;}
+  .cell-input{background:var(--surface2);border:1.5px solid var(--accent);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.81rem;padding:3px 7px;outline:none;width:100%;}
+  .cell-select{background:var(--surface2);border:1.5px solid var(--accent);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.78rem;padding:3px 5px;outline:none;width:100%;cursor:pointer;}
+
+  .priority-badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:.66rem;font-weight:700;background:var(--surface2);color:var(--text2);}
+  .priority-badge.p1{background:var(--accent);color:#0f1117;}
+  .priority-badge.p2{background:rgba(74,222,128,.3);color:var(--accent);}
+  .priority-badge.p3{background:rgba(74,222,128,.15);color:var(--accent2);}
+
+  .bar-bg{background:var(--surface2);border-radius:100px;height:5px;width:80px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
+  .bar-fill.danger{background:linear-gradient(90deg,var(--danger),var(--warn));}
+
+  .type-badge{display:inline-block;padding:2px 7px;border-radius:100px;font-size:.62rem;font-weight:500;white-space:nowrap;}
+  .type-cc{background:rgba(248,113,113,.15);color:var(--danger);}
+  .type-loan{background:rgba(251,146,60,.15);color:var(--warn);}
+  .type-asset{background:rgba(74,222,128,.12);color:var(--accent);}
+  .type-charge{background:rgba(167,139,250,.15);color:#a78bfa;}
+
+  .amount-red{color:var(--danger);font-weight:500;}
+  .amount-green{color:var(--accent);font-weight:500;}
+  .amount-warn{color:var(--warn);font-weight:500;}
+
+  .delete-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.88rem;padding:7px 9px;border-radius:6px;transition:all .15s;display:flex;align-items:center;}
+  .delete-btn:hover{color:var(--danger);background:rgba(248,113,113,.1);}
+  .add-row-btn{display:flex;align-items:center;gap:7px;padding:9px 15px;background:var(--surface);border:1px dashed var(--border);border-radius:10px;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.81rem;transition:all .2s;margin-bottom:22px;}
+  .add-row-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(74,222,128,.04);}
+
+  /* STRESS TIPS */
+  .stress-meter{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:22px;}
+  .stress-section-title{font-family:'DM Serif Display',serif;font-size:.98rem;margin-bottom:11px;}
+  .stress-tips{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:8px;}
+  .tip-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;gap:9px;align-items:flex-start;}
+  .tip-icon{font-size:.98rem;flex-shrink:0;}
+  .tip-text{font-size:.76rem;color:var(--text2);line-height:1.5;}
+  .tip-text strong{color:var(--text);display:block;margin-bottom:2px;}
+
+  /* SHEET ID MODAL */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:center;justify-content:center;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:460px;width:90%;}
+  .modal h3{font-family:'DM Serif Display',serif;font-size:1.15rem;margin-bottom:8px;}
+  .modal p{font-size:.82rem;color:var(--text2);line-height:1.6;margin-bottom:6px;}
+  .modal code{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:.78rem;color:var(--accent);word-break:break-all;}
+  .modal input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.86rem;outline:none;margin:12px 0;transition:border-color .2s;}
+  .modal input:focus{border-color:var(--accent);}
+  .modal-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:6px;}
+  .modal-cancel{padding:8px 18px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.83rem;}
+  .modal-confirm{padding:8px 18px;background:var(--accent);border:none;border-radius:9px;color:#0f1117;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.83rem;font-weight:700;}
+
+  #emptyState{text-align:center;padding:50px 20px;color:var(--text2);}
+  #emptyState .big{font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--muted);margin-bottom:8px;}
+
+  @media(max-width:600px){header,main,#setupBanner{padding:16px;} h1{font-size:1.45rem;}}
+</style>
+</head>
+<body>
+
+<!-- SHEET ID MODAL -->
+<div class="modal-overlay" id="sheetModal">
+  <div class="modal">
+    <h3>📋 Connect Your Google Sheet</h3>
+    <p>Paste your Google Sheet URL or just the Sheet ID. You can find it in the URL bar when your sheet is open:</p>
+    <code>https://docs.google.com/spreadsheets/d/<strong>SHEET_ID_IS_HERE</strong>/edit</code>
+    <input type="text" id="sheetIdInput" placeholder="Paste full URL or just the Sheet ID…">
+    <p style="font-size:.74rem;color:var(--muted)">Make sure the sheet is shared with your Google account or set to "Anyone with the link can edit".</p>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeSheetModal()">Cancel</button>
+      <button class="modal-confirm" onclick="saveSheetId()">Connect Sheet</button>
+    </div>
+  </div>
+</div>
+
+<!-- SIGN IN SCREEN -->
+<div id="signInScreen">
+  <div class="signin-card">
+    <h1>Debt <span>Freedom</span><br>Planner</h1>
+    <p>Sign in with Google to load your debt data and sync changes directly to your spreadsheet in real time.</p>
+    <button class="google-btn" onclick="signIn()">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Sign in with Google
+    </button>
+  </div>
+  <div class="signin-features">
+    <div class="signin-feat"><div class="icon">⚡</div>Edits in the dashboard instantly update your Google Sheet</div>
+    <div class="signin-feat"><div class="icon">📱</div>Works on any device — your data is always in sync</div>
+    <div class="signin-feat"><div class="icon">🔒</div>Only you can access your data — OAuth secured</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appShell">
+  <div id="setupBanner">
+    <h2>📋 Connect a Google Sheet</h2>
+    <p style="font-size:.8rem;color:var(--text2);margin-bottom:10px">Enter your Google Sheet ID so edits here sync directly to your spreadsheet.</p>
+    <div class="url-row">
+      <input type="text" id="sheetUrlInput" placeholder="Paste your Google Sheet URL or Sheet ID…">
+      <button class="load-btn" onclick="saveSheetIdFromBanner()">Connect</button>
+    </div>
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
+
+  <header>
+    <div>
+      <h1>Debt <span>Freedom</span> Planner</h1>
+      <p class="subtitle" id="userEmail">Loading…</p>
+    </div>
+    <div class="header-right">
+      <span class="edit-hint">✎ Edits sync to Google Sheets</span>
+      <div class="sync-indicator">
+        <div class="sync-dot" id="syncDot"></div>
+        <span id="syncLabel" style="color:var(--text2)">Not connected</span>
+      </div>
+      <button class="hdr-btn" onclick="openSheetModal()">🔗 Change Sheet</button>
+      <button class="hdr-btn danger-btn" onclick="signOut()">Sign Out</button>
+      <div class="total-badge">
+        <div class="lbl">Total Debt</div>
+        <div class="amt" id="headerTotal">—</div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="controls">
+      <div class="extra-input">
+        <span>Extra Monthly $</span>
+        <input type="number" id="extraPayment" value="500" min="0" max="50000" step="50" oninput="updateDashboard()">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="color:var(--text2);font-size:.7rem">Payoff Strategy</span>
+        <div class="strategy-btns">
+          <button class="strategy-btn active" onclick="setStrategy('avalanche',this)">⚡ Avalanche <span style="font-size:.66rem;opacity:.6">(save most $)</span></button>
+          <button class="strategy-btn" onclick="setStrategy('snowball',this)">⛄ Snowball <span style="font-size:.66rem;opacity:.6">(quick wins)</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div id="emptyState">
+      <div class="big">Connect your Google Sheet above</div>
+      <div>Click "Change Sheet" in the header and paste your Sheet ID</div>
+    </div>
+
+    <div id="dashboard" style="display:none">
+      <div class="summary-grid" id="summaryGrid"></div>
+      <div class="section-header">
+        <div class="section-title">Priority Payoff Order <span class="pill" id="strategyLabel">Avalanche</span></div>
+      </div>
+      <div class="payoff-plan" id="payoffPlan"></div>
+      <div class="section-header">
+        <div class="section-title">Full Debt Breakdown <span class="pill" id="debtCount"></span></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="debt-table" id="debtTable"></table>
+      </div>
+      <button class="add-row-btn" onclick="addDebt()">＋ Add New Debt</button>
+      <div class="stress-meter">
+        <div class="stress-section-title">🧘 Stress-Relief Tips</div>
+        <div class="stress-tips">
+          <div class="tip-card"><div class="tip-icon">🎯</div><div class="tip-text"><strong>Focus on one debt at a time</strong>All extra payments toward #1 priority. One falling balance is far less stressful than spreading thin.</div></div>
+          <div class="tip-card"><div class="tip-icon">🚫</div><div class="tip-text"><strong>Freeze high-rate cards</strong>Anything above 20% APR grows daily. No new charges while attacking them.</div></div>
+          <div class="tip-card"><div class="tip-icon">📅</div><div class="tip-text"><strong>Monthly review only</strong>Update once a month on a set date — not daily. Obsessive checking adds anxiety.</div></div>
+          <div class="tip-card"><div class="tip-icon">💪</div><div class="tip-text"><strong>Celebrate each payoff</strong>When a balance hits zero, celebrate cheaply, then roll that freed payment to the next target.</div></div>
+          <div class="tip-card"><div class="tip-icon">💳</div><div class="tip-text"><strong>Balance transfer opportunity</strong>A 0% intro APR card for your highest-rate balances pauses interest while you pay principal.</div></div>
+          <div class="tip-card"><div class="tip-icon">🌱</div><div class="tip-text"><strong>Low-rate debt is healthy</strong>Mortgage and car loans under 5% are fine. Minimums are the right move.</div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const CLIENT_ID  = '1037739775538-vr5j9tpjlugivrrbudvdbfca7jnnc1uo.apps.googleusercontent.com';
+const SCOPES     = 'https://www.googleapis.com/auth/spreadsheets';
+const LS_SHEET   = 'dfp_sheet_id';
+const LS_DEBTS   = 'dfp_debts_cache';
+const TYPES      = ["Credit Card","Charge Card","Loan","Asset Backed Loan"];
+const OWNERS     = ["Me","Wife","Me & Wife","Joint"];
+// Sheet data starts at row 4 (1=title,2=subtitle,3=headers)
+const DATA_START_ROW = 4;
+const SHEET_NAME = 'Debts';
+
+let accessToken  = null;
+let debts        = [];
+let nextId       = 1;
+let strategy     = 'avalanche';
+let extraPayment = 500;
+let sheetId      = null;
+let syncQueue    = {};  // id -> pending write
+let syncTimer    = null;
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function signIn() {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      if (resp.error) { alert('Sign in failed: ' + resp.error); return; }
+      accessToken = resp.access_token;
+      onSignedIn();
+    }
+  });
+  client.requestAccessToken();
+}
+
+function signOut() {
+  if (accessToken) google.accounts.oauth2.revoke(accessToken);
+  accessToken = null;
+  document.getElementById('signInScreen').style.display = 'flex';
+  document.getElementById('appShell').style.display = 'none';
+}
+
+function onSignedIn() {
+  document.getElementById('signInScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'block';
+
+  // Get user info
+  fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  }).then(r=>r.json()).then(u=>{
+    document.getElementById('userEmail').textContent = `Signed in as ${u.email}`;
+  });
+
+  sheetId = localStorage.getItem(LS_SHEET) || null;
+
+  if (sheetId) {
+    document.getElementById('setupBanner').style.display = 'none';
+    setSyncStatus('syncing','Loading…');
+    loadFromSheet();
+  } else {
+    document.getElementById('setupBanner').style.display = 'block';
+    setSyncStatus('','Not connected');
+    // Try loading cached data
+    if (loadCachedDebts()) {
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      updateDashboard();
+    }
+  }
+}
+
+// ── SHEET ID MODAL ────────────────────────────────────────────────────────────
+function openSheetModal() {
+  const input = document.getElementById('sheetIdInput');
+  input.value = sheetId || '';
+  document.getElementById('sheetModal').classList.add('show');
+  setTimeout(()=>input.focus(), 100);
+}
+function closeSheetModal() { document.getElementById('sheetModal').classList.remove('show'); }
+
+function extractSheetId(val) {
+  val = val.trim();
+  const m = val.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : val;
+}
+
+function saveSheetId() {
+  const raw = document.getElementById('sheetIdInput').value.trim();
+  if (!raw) return;
+  sheetId = extractSheetId(raw);
+  localStorage.setItem(LS_SHEET, sheetId);
+  closeSheetModal();
+  document.getElementById('setupBanner').style.display = 'none';
+  setSyncStatus('syncing','Loading…');
+  loadFromSheet();
+}
+function saveSheetIdFromBanner() {
+  const raw = document.getElementById('sheetUrlInput').value.trim();
+  if (!raw) return;
+  sheetId = extractSheetId(raw);
+  localStorage.setItem(LS_SHEET, sheetId);
+  document.getElementById('setupBanner').style.display = 'none';
+  setSyncStatus('syncing','Loading…');
+  loadFromSheet();
+}
+
+// ── SHEETS API ────────────────────────────────────────────────────────────────
+function sheetsGet(range) {
+  return fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  ).then(r => r.json());
+}
+
+function sheetsUpdate(range, values) {
+  return fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
+    {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ range, majorDimension: 'ROWS', values })
+    }
+  ).then(r => r.json());
+}
+
+function sheetsAppend(values) {
+  return fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(SHEET_NAME)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ majorDimension: 'ROWS', values })
+    }
+  ).then(r => r.json());
+}
+
+function sheetsDeleteRow(rowIndex) {
+  // rowIndex is 0-based sheet row
+  return fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requests: [{
+          deleteDimension: {
+            range: { sheetId: 0, dimension: 'ROWS', startIndex: rowIndex, endIndex: rowIndex + 1 }
+          }
+        }]
+      })
+    }
+  ).then(r => r.json());
+}
+
+// ── LOAD FROM SHEET ───────────────────────────────────────────────────────────
+async function loadFromSheet() {
+  if (!sheetId || !accessToken) return;
+  try {
+    const data = await sheetsGet(`${SHEET_NAME}!A:K`);
+    const rows = data.values || [];
+    // rows[0]=title, rows[1]=subtitle, rows[2]=headers, rows[3+]=data
+    debts = []; nextId = 1;
+    for (let i = 3; i < rows.length; i++) {
+      const r = rows[i];
+      const name = (r[0]||'').trim();
+      if (!name || name.toUpperCase()==='TOTALS') continue;
+      debts.push({
+        id:       nextId++,
+        rowIndex: i,  // 0-based row index in sheet
+        name,
+        amount:   parseFloat((r[1]||'').replace(/[$,]/g,'')) || 0,
+        payment:  parseFloat((r[2]||'').replace(/[$,]/g,'')) || 0,
+        rate:     parseFloat((r[3]||'').replace(/[%,]/g,'')) || 0,
+        type:     (r[4]||'Loan').trim(),
+        owner:    (r[5]||'Me').trim(),
+      });
+    }
+    cacheDebts();
+    setSyncStatus('synced', `Synced · ${debts.length} accounts`);
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    updateDashboard();
+  } catch(e) {
+    setSyncStatus('error', 'Load failed — check Sheet ID');
+    console.error(e);
+  }
+}
+
+// ── WRITE BACK TO SHEET ───────────────────────────────────────────────────────
+function scheduleWrite(debt) {
+  if (!sheetId || !accessToken) return;
+  syncQueue[debt.id] = debt;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(flushWrites, 800);
+  setSyncStatus('syncing', 'Saving…');
+}
+
+async function flushWrites() {
+  const toWrite = { ...syncQueue };
+  syncQueue = {};
+  try {
+    for (const debt of Object.values(toWrite)) {
+      if (debt._deleted) {
+        await sheetsDeleteRow(debt.rowIndex);
+        // After deletion, reload to re-sync row indices
+        await loadFromSheet();
+        return;
+      }
+      if (debt._new) {
+        await sheetsAppend([[debt.name, debt.amount, debt.payment, debt.rate, debt.type, debt.owner]]);
+        debt._new = false;
+        // Reload to get the assigned rowIndex
+        await loadFromSheet();
+        return;
+      }
+      const sheetRow = debt.rowIndex + 1; // 1-based
+      const range = `${SHEET_NAME}!A${sheetRow}:F${sheetRow}`;
+      await sheetsUpdate(range, [[debt.name, debt.amount, debt.payment, debt.rate, debt.type, debt.owner]]);
+    }
+    cacheDebts();
+    setSyncStatus('synced', `Synced · ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`);
+  } catch(e) {
+    setSyncStatus('error', 'Sync failed — will retry');
+    console.error(e);
+    // Put them back in queue and retry
+    Object.assign(syncQueue, toWrite);
+    syncTimer = setTimeout(flushWrites, 3000);
+  }
+}
+
+// ── SYNC STATUS ───────────────────────────────────────────────────────────────
+function setSyncStatus(state, label) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  dot.className = 'sync-dot' + (state ? ' ' + state : '');
+  lbl.textContent = label;
+}
+
+// ── CACHE ─────────────────────────────────────────────────────────────────────
+function cacheDebts() { try { localStorage.setItem(LS_DEBTS, JSON.stringify(debts)); } catch(e){} }
+function loadCachedDebts() {
+  try {
+    const raw = localStorage.getItem(LS_DEBTS);
+    if (raw) { debts = JSON.parse(raw); nextId = Math.max(...debts.map(d=>d.id),0)+1; return debts.length > 0; }
+  } catch(e){}
+  return false;
+}
+
+// ── EDITING ───────────────────────────────────────────────────────────────────
+function addDebt() {
+  const newDebt = { id: nextId++, rowIndex: -1, _new: true, name: 'New Debt', amount: 0, payment: 0, rate: 0, type: 'Credit Card', owner: 'Me' };
+  debts.push(newDebt);
+  scheduleWrite(newDebt);
+  updateDashboard();
+  setTimeout(()=>{
+    const rows = document.querySelectorAll('#debtTable tbody tr');
+    if (rows.length) rows[rows.length-1].scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }, 80);
+}
+
+function deleteDebt(id) {
+  if (debts.length <= 1) return;
+  const debt = debts.find(d => d.id === id);
+  if (!debt) return;
+  debts = debts.filter(d => d.id !== id);
+  if (!debt._new) { debt._deleted = true; scheduleWrite(debt); }
+  updateDashboard();
+}
+
+function startEdit(td, id, field) {
+  const debt = debts.find(d => d.id === id);
+  if (!debt) return;
+  const wrap = td.querySelector('.cw');
+  if (!wrap) return;
+
+  if (field === 'type' || field === 'owner') {
+    const opts = field === 'type' ? TYPES : OWNERS;
+    const sel = document.createElement('select');
+    sel.className = 'cell-select';
+    opts.forEach(t => { const o = document.createElement('option'); o.value=t; o.textContent=t; if(t===debt[field]) o.selected=true; sel.appendChild(o); });
+    wrap.innerHTML = ''; wrap.appendChild(sel); sel.focus();
+    const save = () => { debt[field]=sel.value; scheduleWrite(debt); updateDashboard(); };
+    sel.addEventListener('change', save); sel.addEventListener('blur', save);
+    return;
+  }
+
+  const input = document.createElement('input');
+  input.className = 'cell-input';
+  input.type = field === 'name' ? 'text' : 'number';
+  input.value = debt[field];
+  if (field !== 'name') { input.min='0'; input.step = field==='rate'?'0.01':'1'; }
+  wrap.innerHTML = ''; wrap.appendChild(input); input.focus(); input.select();
+
+  const save = () => {
+    if (field === 'name') { debt.name = input.value.trim() || debt.name; }
+    else { const v = parseFloat(input.value); if (!isNaN(v) && v >= 0) debt[field] = v; }
+    scheduleWrite(debt);
+    updateDashboard();
+  };
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e => { if(e.key==='Enter'){e.preventDefault();save();} if(e.key==='Escape') updateDashboard(); });
+}
+
+// ── STRATEGY ──────────────────────────────────────────────────────────────────
+function setStrategy(s, btn) {
+  strategy = s;
+  document.querySelectorAll('.strategy-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateDashboard();
+}
+function getSorted() {
+  const d = [...debts];
+  return strategy==='avalanche' ? d.sort((a,b)=>b.rate-a.rate) : d.sort((a,b)=>a.amount-b.amount);
+}
+
+// ── MATH ──────────────────────────────────────────────────────────────────────
+function monthsToPayoff(amount, rate, pmt) {
+  if (amount<=0) return 0;
+  if (rate===0) return pmt>0 ? Math.ceil(amount/pmt) : Infinity;
+  const r = rate/100/12;
+  if (pmt<=amount*r) return Infinity;
+  return Math.ceil(-Math.log(1-(amount*r)/pmt)/Math.log(1+r));
+}
+function totalInterestSaved(extra) {
+  let saved=0;
+  debts.forEach(d=>{
+    if(d.rate===0||d.payment<=0) return;
+    const n=debts.length||1;
+    const base=monthsToPayoff(d.amount,d.rate,d.payment);
+    const boost=monthsToPayoff(d.amount,d.rate,d.payment+extra/n);
+    if(base!==Infinity&&boost!==Infinity)
+      saved+=Math.max(0,(d.payment*base-d.amount)-((d.payment+extra/n)*boost-d.amount));
+  });
+  return saved;
+}
+function fmt(n){return '$'+Math.round(n).toLocaleString();}
+function typeClass(t){
+  if(t.includes('Credit')) return 'type-cc';
+  if(t==='Loan') return 'type-loan';
+  if(t.includes('Asset')) return 'type-asset';
+  return 'type-charge';
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function updateDashboard() {
+  if (!debts.length) return;
+  extraPayment = parseFloat(document.getElementById('extraPayment').value)||0;
+  renderSummary(); renderPayoffPlan(); renderTable();
+}
+
+function renderSummary() {
+  const totalDebt  = debts.reduce((s,d)=>s+d.amount,0);
+  const monthlyInt = debts.reduce((s,d)=>s+d.amount*(d.rate/100/12),0);
+  const highRate   = debts.filter(d=>d.rate>20);
+  const highTotal  = highRate.reduce((s,d)=>s+d.amount,0);
+  const totalMin   = debts.reduce((s,d)=>s+d.payment,0);
+  const saved      = totalInterestSaved(extraPayment);
+  const sorted     = getSorted();
+  const focus      = sorted.find(d=>d.rate>0);
+  const focusMo    = focus ? monthsToPayoff(focus.amount,focus.rate,focus.payment+extraPayment) : null;
+
+  document.getElementById('headerTotal').textContent = fmt(totalDebt);
+  document.getElementById('debtCount').textContent = debts.length+' accounts';
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="stat-card"><div class="slabel">Total Debt</div><div class="svalue red">${fmt(totalDebt)}</div><div class="sdesc">${debts.length} accounts</div></div>
+    <div class="stat-card"><div class="slabel">Monthly Interest</div><div class="svalue red">${fmt(monthlyInt)}/mo</div><div class="sdesc">Growing daily</div></div>
+    <div class="stat-card"><div class="slabel">High-Rate Debt</div><div class="svalue red">${fmt(highTotal)}</div><div class="sdesc">${highRate.length} accounts >20%</div></div>
+    <div class="stat-card"><div class="slabel">Monthly Minimums</div><div class="svalue">${fmt(totalMin)}</div><div class="sdesc">+${fmt(extraPayment)} extra = ${fmt(totalMin+extraPayment)}</div></div>
+    <div class="stat-card"><div class="slabel">Interest Saved</div><div class="svalue green">${fmt(saved)}</div><div class="sdesc">Adding ${fmt(extraPayment)}/mo</div></div>
+    <div class="stat-card"><div class="slabel">Focus Payoff</div><div class="svalue green">${focusMo===null?'—':focusMo===Infinity?'↑ Pay more':focusMo+' mo'}</div><div class="sdesc">${focus?focus.name.split(' ').slice(0,2).join(' '):'—'}</div></div>`;
+}
+
+function renderPayoffPlan() {
+  const label = strategy==='avalanche'?'Avalanche · High Interest First':'Snowball · Small Balance First';
+  document.getElementById('strategyLabel').textContent = label;
+  const sorted = getSorted();
+  document.getElementById('payoffPlan').innerHTML = sorted.slice(0,8).map((d,i)=>{
+    const months = monthsToPayoff(d.amount,d.rate,d.payment+(i===0?extraPayment:0));
+    const f = i===0;
+    return `<div class="payoff-card ${f?'focus':''}">
+      ${f?'<span class="focus-label">Focus Now</span>':''}
+      <div class="rank">Priority #${i+1}</div>
+      <div class="pname">${d.name}</div>
+      <div class="pamount">${fmt(d.amount)}</div>
+      <div class="prate">${d.rate>0?d.rate+'% APR':'0% — no interest!'}</div>
+      ${f?`<div class="month-saved">${months===Infinity?'⚠ Increase payment':'~'+months+' months to payoff'}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function renderTable() {
+  const sorted = getSorted();
+  const maxAmt = Math.max(...debts.map(d=>d.amount),1);
+  const rows = sorted.map((d,i)=>{
+    const pClass = i===0?'p1':i<3?'p2':i<6?'p3':'';
+    const monthly = d.amount*(d.rate/100/12);
+    const barPct  = (d.amount/maxAmt*100).toFixed(0);
+    const isHigh  = d.rate>=20;
+    const rClr    = d.rate>20?'amount-red':d.rate>5?'amount-warn':'amount-green';
+    return `<tr class="${i===0?'priority-row':''}">
+      <td><div class="cw ro" style="justify-content:center"><span class="priority-badge ${pClass}">${i+1}</span></div></td>
+      <td onclick="startEdit(this,${d.id},'name')"><div class="cw ed" style="font-weight:500;min-width:148px">${d.name}</div></td>
+      <td onclick="startEdit(this,${d.id},'amount')"><div class="cw ed amount-red">${fmt(d.amount)}</div></td>
+      <td><div class="cw ro"><div class="bar-bg"><div class="bar-fill ${isHigh?'danger':''}" style="width:${barPct}%"></div></div></div></td>
+      <td onclick="startEdit(this,${d.id},'payment')"><div class="cw ed" style="color:var(--text2)">${fmt(d.payment)}</div></td>
+      <td onclick="startEdit(this,${d.id},'rate')"><div class="cw ed ${rClr}">${d.rate}%</div></td>
+      <td><div class="cw ro ${monthly>100?'amount-red':'amount-warn'}">$${monthly.toFixed(0)}/mo</div></td>
+      <td onclick="startEdit(this,${d.id},'type')"><div class="cw ed"><span class="type-badge ${typeClass(d.type)}">${d.type}</span></div></td>
+      <td onclick="startEdit(this,${d.id},'owner')"><div class="cw ed" style="color:var(--text2)">${d.owner}</div></td>
+      <td><button class="delete-btn" onclick="deleteDebt(${d.id})" title="Remove">✕</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('debtTable').innerHTML=`
+    <thead><tr><th>#</th><th>Account ✎</th><th>Balance ✎</th><th>Size</th><th>Min Payment ✎</th><th>Rate ✎</th><th>Mo. Interest</th><th>Type ✎</th><th>Owner ✎</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>`;
+}
+</script>
+</body>
+</html>
